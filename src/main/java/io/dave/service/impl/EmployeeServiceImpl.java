@@ -38,7 +38,6 @@ public class EmployeeServiceImpl implements IEmployeeService {
 	@Override
 	public void updateEmployee(Employee emp) {
 		employeeRepo.save(emp);
-
 	}
 
 	@Override
