@@ -16,5 +16,5 @@ public interface IEmployeeService {
 
 	void updateEmployee(Employee emp);
 
-	Integer modifyEmployeeName(String newName, Long employeeId);
+	int modifyEmployeeName(String newName, Long employeeId);
 }

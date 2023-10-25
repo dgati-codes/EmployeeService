@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -14,78 +15,68 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.dave.dto.ApiResponse;
 import io.dave.entity.Employee;
-import io.dave.service.impl.EmployeeServiceImpl;
+import io.dave.service.IEmployeeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("api/employee")
-@Tag(name = "Approval Level API",
-description = "Retrieve, Update, Create and remove employee Data")
+@Tag(name = "Employee Record API", description = "Retrieve, Update, Create and remove employee Data")
+@CrossOrigin("http://localhost:4200/")
 public class EmployeeController {
 
 	@Autowired
-	private EmployeeServiceImpl employeeService;
-
-	@GetMapping("/list")
-	@Operation(summary = "Retrieve all Employees")
-	public ResponseEntity<ApiResponse<List<Employee>>> getAllEmployees() {
-		return Optional.ofNullable(employeeService.getAllEmployees()).filter(list -> !list.isEmpty())
-				.map(data -> ResponseEntity.ok(new ApiResponse<>(data, "success"))).orElseGet(() -> ResponseEntity
-						.status(HttpStatus.NOT_FOUND).body(new ApiResponse<>(null, "No Record Found")));
-	}
-
-	@GetMapping("/{empId}")
-	@Operation(summary = "Retrieve Employee by Id")
-	public ResponseEntity<ApiResponse<Employee>> getEmployeeById(@PathVariable("empId") Long empId) {
-		return Optional.ofNullable(employeeService.getEmployeeById(empId))
-				.map(data -> ResponseEntity.ok(new ApiResponse<>(data, "success"))).orElseGet(() -> ResponseEntity
-						.status(HttpStatus.NOT_FOUND).body(new ApiResponse<>(null, "Record Not Found")));
-	}
+	private IEmployeeService employeeService;
 
 	@PostMapping("/create")
 	@Operation(summary = "Create Employee")
-	public ResponseEntity<ApiResponse<Long>> createEmployee(@RequestBody Employee employee) {
-		return Optional.ofNullable(employeeService.addEmployee(employee))
-				.map(data -> ResponseEntity.ok(new ApiResponse<>(data, "success")))
-				.orElseGet(() -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-						.body(new ApiResponse<>(null, "Failed to create employee")));
+	public ResponseEntity<Long> addEmployee(@RequestBody Employee employee) {
+		return ResponseEntity.status(HttpStatus.CREATED).body(employeeService.addEmployee(employee));
 	}
 
-	@DeleteMapping("/remove/{empId}")
+	@GetMapping("/list")
+	@Operation(summary = "Retrieve all Employees")
+	public ResponseEntity<List<Employee>> getAllEmployees() {
+		return ResponseEntity.status(HttpStatus.OK).body(employeeService.getAllEmployees());
+	}
+
+	@GetMapping("/{id}")
+	@Operation(summary = "Retrieve Employee by Id")
+	public ResponseEntity<Employee> getEmployeeById(@PathVariable Long id) {
+		Employee employee = employeeService.getEmployeeById(id);
+		return employee != null ? ResponseEntity.status(HttpStatus.OK).body(employee)
+				: ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+	}
+
+	@DeleteMapping("/remove/{id}")
 	@Operation(summary = "Remove Employee by Id")
-	public ResponseEntity<ApiResponse<Void>> deleteEmployee(@PathVariable("empId") Long empId) {
-		try {
-			employeeService.deleteEmployeeById(empId);
-			return ResponseEntity.ok(new ApiResponse<>(null, "success"));
-		} catch (Exception e) {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-					.body(new ApiResponse<>(null, "Failed to delete employee"));
-		}
+	public ResponseEntity<Void> deleteEmployeeById(@PathVariable Long id) {
+		employeeService.deleteEmployeeById(id);
+		return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
 	}
 
 	@PutMapping("/update")
 	@Operation(summary = "Update Employee record")
-	public ResponseEntity<ApiResponse<Void>> updateEmployee(@RequestBody Employee employee) {
-		try {
-			employeeService.updateEmployee(employee);
-			return ResponseEntity.ok(new ApiResponse<>(null, "success"));
-		} catch (Exception e) {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-					.body(new ApiResponse<>(null, "Failed to update employee"));
-		}
-	}
-	@PatchMapping("/modify")
-	@Operation(summary = "Modify Employee name and Id")
-    public ResponseEntity<ApiResponse<Integer>> modifyEmployeeName(@RequestBody Long empId, @RequestBody String newName) {
-        return Optional.of(employeeService.modifyEmployeeName(newName, empId))
-        		.map(data -> ResponseEntity.ok(new ApiResponse<>(data, "success")))
-				.orElseGet(() -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-						.body(new ApiResponse<>(null, "Failed to modify employee"))); 
+	public ResponseEntity<?> updateEmployee(@RequestBody Employee employee) {
+		Optional<Employee> existingEmployee = Optional.ofNullable(employeeService.getEmployeeById(employee.getEmpId()));
 
-}
+		return existingEmployee.map(emp -> {
+			employeeService.updateEmployee(employee);
+			return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+		}).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+	}
+
+	@PatchMapping("/edit")
+	@Operation(summary = "Update Employee name")
+	public ResponseEntity<Void> modifyEmployeeName(@RequestParam Long id, @RequestParam String newName) {
+	    int rowsUpdated = employeeService.modifyEmployeeName(newName, id);
+	    return rowsUpdated > 0 ? ResponseEntity.status(HttpStatus.NO_CONTENT).build()
+	            : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+	}
+
+
 }

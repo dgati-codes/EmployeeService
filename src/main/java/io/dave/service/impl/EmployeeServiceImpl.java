@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import io.dave.entity.Employee;
 import io.dave.repo.EmployeeRepository;
 import io.dave.service.IEmployeeService;
+import jakarta.transaction.Transactional;
 
 @Service
 public class EmployeeServiceImpl implements IEmployeeService {
@@ -41,8 +42,9 @@ public class EmployeeServiceImpl implements IEmployeeService {
 	}
 
 	@Override
-	public Integer modifyEmployeeName(String newName, Long employeeId) {
-		return employeeRepo.updateEmployeeName(newName, employeeId);
+	@Transactional
+	public int modifyEmployeeName(String newName, Long employeeId) {
+		 return employeeRepo.updateEmployeeName(newName, employeeId);
 	}
 
 }
